@@ -1,3 +1,4 @@
+import datetime
 import html
 import re
 from typing import Optional, List
@@ -39,16 +40,21 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
     num_warns, reasons = sql.warn_user(user.id, chat.id, reason)
     if num_warns >= limit:
         sql.reset_warns(user.id, chat.id)
-        if soft_warn:  # kick
-            chat.unban_member(user.id)
-            reply = "{} warnings, {} has been kicked!".format(limit, mention_html(user.id, user.first_name))
+        if soft_warn:  # mute
+            # chat.unban_member(user.id)
+            oneday = datetime.now() + datetime.timedelta(days=1)
+            chat.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
+            reply = "{} warnings, {} has been muted!".format(limit, mention_html(user.id, user.first_name))
 
-        else:  # ban
-            chat.kick_member(user.id)
-            reply = "{} warnings, {} has been banned!".format(limit, mention_html(user.id, user.first_name))
+        else:  # kick
+            chat.unban_member(user.id)
+            # chat.kick_member(user.id)
+            reply = "{} warnings, {} has been kicked!".format(limit, mention_html(user.id, user.first_name))
 
         for warn_reason in reasons:
             reply += "\n - {}".format(html.escape(warn_reason))
+
+        sql.reset_warns(user.id, chat.id)
 
         message.bot.send_sticker(chat.id, BAN_STICKER)  # banhammer marie sticker
         keyboard = []
