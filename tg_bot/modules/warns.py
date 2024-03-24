@@ -26,7 +26,7 @@ CURRENT_WARNING_FILTER_STRING = "<b>Current warning filters in this chat:</b>\n"
 
 
 # Not async
-def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = None) -> str:
+def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = None, bot: Bot = None) -> str:
     if is_user_admin(chat, user.id):
         message.reply_text("Damn admins, can't even be warned!")
         return ""
@@ -39,16 +39,15 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
     limit, soft_warn = sql.get_warn_setting(chat.id)
     num_warns, reasons = sql.warn_user(user.id, chat.id, reason)
     if num_warns >= limit:
-        sql.reset_warns(user.id, chat.id)
         if soft_warn:  # mute
             # chat.unban_member(user.id)
             oneday = datetime.now() + timedelta(days=1)
-            chat.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
+            bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
             reply = "{} warnings, {} has been muted!".format(limit, mention_html(user.id, user.first_name))
 
         else:  # kick
-            chat.unban_member(user.id)
             # chat.kick_member(user.id)
+            chat.unban_member(user.id)
             reply = "{} warnings, {} has been kicked!".format(limit, mention_html(user.id, user.first_name))
 
         for warn_reason in reasons:
@@ -142,9 +141,9 @@ def warn_user(bot: Bot, update: Update, args: List[str]) -> str:
 
     if user_id:
         if message.reply_to_message and message.reply_to_message.from_user.id == user_id:
-            return warn(message.reply_to_message.from_user, chat, reason, message.reply_to_message, warner)
+            return warn(message.reply_to_message.from_user, chat, reason, message.reply_to_message, warner, bot)
         else:
-            return warn(chat.get_member(user_id).user, chat, reason, message, warner)
+            return warn(chat.get_member(user_id).user, chat, reason, message, warner, bot)
     else:
         message.reply_text("No user was designated!")
     return ""
@@ -304,7 +303,7 @@ def reply_filter(bot: Bot, update: Update) -> str:
         if re.search(pattern, to_match, flags=re.IGNORECASE):
             user = update.effective_user  # type: Optional[User]
             warn_filter = sql.get_warn_filter(chat.id, keyword)
-            return warn(user, chat, warn_filter.reply, message)
+            return warn(user, chat, warn_filter.reply, message, bot)
     return ""
 
 
