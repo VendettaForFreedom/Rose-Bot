@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import html
 import re
 from typing import Optional, List
@@ -42,7 +42,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
         sql.reset_warns(user.id, chat.id)
         if soft_warn:  # mute
             # chat.unban_member(user.id)
-            oneday = datetime.now() + datetime.timedelta(days=1)
+            oneday = datetime.now() + timedelta(days=1)
             chat.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
             reply = "{} warnings, {} has been muted!".format(limit, mention_html(user.id, user.first_name))
 
