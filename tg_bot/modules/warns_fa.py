@@ -74,7 +74,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
         reply = "{} دارای {}/{} هشدار است... مراقب باشید!".format(mention_html(user.id, user.first_name), num_warns,
                                                              limit)
         if reason:
-            reply += "\nReason for last warn:\n{}".format(html.escape(reason))
+            reply += "\nدلیل آخرین هشدار:\n{}".format(html.escape(reason))
 
         log_reason = "<b>{}:</b>" \
                       "\n#WARN" \
@@ -403,12 +403,12 @@ __help__ = """
 
 *Admin only:*
  - /warn <userhandle>: warn a user. After 3 warns, the user will be banned from the group. Can also be used as a reply.
- - /resetwarn <userhandle>: اخطارهای یک کاربر را ریست می‌کند. همچنین می‌توان به عنوان پاسخ استفاده شود.
+ - /resetwarn <userhandle>: reset the warnings for a user. Can also be used as a reply.
  - /addwarn <keyword> <reply message>: set a warning filter on a certain keyword. If you want your keyword to \
 be a sentence, encompass it with quotes, as such: `/addwarn "very angry" This is an angry user`. 
- - /nowarn <keyword>: یک فیلتر اخطار را متوقف کنید
- - /warnlimit <num>: حد اخطار را تنظیم کنید
- - /strongwarn <on/yes/off/no>: اگر روشن باشد، فراتر رفتن از حد اخطار منجر به ممنوعیت خواهد شد. در غیر این صورت، فقط اخراج می‌شود.
+ - /nowarn <keyword>: stop a warning filter
+ - /warnlimit <num>: set the warning limit
+ - /strongwarn <on/yes/off/no>: If set to on, exceeding the warn limit will result in a ban. Else, will just kick.
 """
 
 __mod_name__ = "اخطارها"
