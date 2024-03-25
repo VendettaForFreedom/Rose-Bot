@@ -55,7 +55,6 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
 
         sql.reset_warns(user.id, chat.id)
 
-        message.bot.send_sticker(chat.id, BAN_STICKER)  # banhammer marie sticker
         keyboard = []
         log_reason = "<b>{}:</b>" \
                       "\n#WARN_BAN" \
