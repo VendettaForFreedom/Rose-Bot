@@ -39,16 +39,16 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
     limit, soft_warn = sql.get_warn_setting(chat.id)
     num_warns, reasons = sql.warn_user(user.id, chat.id, reason)
     if num_warns >= limit:
-        if soft_warn:  # mute
-            # chat.unban_member(user.id)
-            oneday = datetime.now() + timedelta(days=1)
-            bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
-            reply = "{} warnings, {} has been muted!".format(limit, mention_html(user.id, user.first_name))
-
-        else:  # kick
+        if soft_warn:  # kick
             # chat.kick_member(user.id)
             chat.unban_member(user.id)
-            reply = "{} warnings, {} has been kicked!".format(limit, mention_html(user.id, user.first_name))
+            reply = "{} warnings, {} has been kicked!".format(limit, mention_html(user.id, user.first_name)) 
+
+        else:  # mute
+            # chat.unban_member(user.id)
+            oneday = datetime.now() + timedelta(hours=limit)
+            bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
+            reply = "{} warnings, {} has been muted!".format(limit, mention_html(user.id, user.first_name))
 
         for warn_reason in reasons:
             reply += "\n - {}".format(html.escape(warn_reason))
