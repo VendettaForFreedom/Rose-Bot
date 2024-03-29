@@ -54,10 +54,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
             reply += "\n - {}".format(html.escape(warn_reason))
 
         sql.reset_warns(user.id, chat.id)
-        bot.delete_message(chat.id, message.message_id)
-        bot.delete_message(chat.id, message.reply_to_message.message_id)
 
-        message.bot.send_sticker(chat.id, BAN_STICKER)  # banhammer marie sticker
         keyboard = []
         log_reason = "<b>{}:</b>" \
                      "\n#WARN_BAN" \
@@ -90,6 +87,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
 
     try:
         message.reply_text(reply, reply_markup=keyboard, parse_mode=ParseMode.HTML)
+        message.delete()
     except BadRequest as excp:
         if excp.message == "Replied message not found":
             # Do not reply
@@ -143,7 +141,9 @@ def warn_user(bot: Bot, update: Update, args: List[str]) -> str:
 
     if user_id:
         if message.reply_to_message and message.reply_to_message.from_user.id == user_id:
-            return warn(message.reply_to_message.from_user, chat, reason, message.reply_to_message, warner, bot)
+            result = warn(message.reply_to_message.from_user, chat, reason, message.reply_to_message, warner, bot)
+            message.delete()
+            return result
         else:
             return warn(chat.get_member(user_id).user, chat, reason, message, warner, bot)
     else:
