@@ -46,7 +46,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
 
         else:  # mute
             # chat.unban_member(user.id)
-            oneday = datetime.now() + timedelta(hours=limit)
+            oneday = datetime.now() + timedelta(hours=10*limit)
             bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
             reply = "{} warnings, {} has been muted!".format(limit, mention_html(user.id, user.first_name))
 
@@ -54,6 +54,8 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
             reply += "\n - {}".format(html.escape(warn_reason))
 
         sql.reset_warns(user.id, chat.id)
+        bot.delete_message(chat.id, message.message_id)
+        bot.delete_message(chat.id, message.reply_to_message.message_id)
 
         message.bot.send_sticker(chat.id, BAN_STICKER)  # banhammer marie sticker
         keyboard = []
