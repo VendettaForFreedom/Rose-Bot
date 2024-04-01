@@ -111,7 +111,7 @@ def button(bot: Bot, update: Update) -> str:
         res = sql.remove_warn(user_id, chat.id)
         if res:
             update.effective_message.edit_text(
-                "هشدار توسط {} حذف شد.".format(mention_html(user.id, user.first_name)),
+                "هشدار حذف شد.".format(mention_html(user.id, user.first_name)),
                 parse_mode=ParseMode.HTML)
             user_member = chat.get_member(user_id)
             return "<b>{}:</b>" \
@@ -146,8 +146,6 @@ def warn_user(bot: Bot, update: Update, args: List[str]) -> str:
             return result
         else:
             return warn(chat.get_member(user_id).user, chat, reason, message, warner, bot)
-    else:
-        message.reply_text("No user was designated!")
     return ""
 
 
@@ -172,8 +170,6 @@ def reset_warns(bot: Bot, update: Update, args: List[str]) -> str:
                 "\n<b>کاربر:</b> {}".format(html.escape(chat.title),
                                           mention_html(user.id, user.first_name),
                                           mention_html(warned.id, warned.first_name))
-    else:
-        message.reply_text("No user has been designated!")
     return ""
 
 
