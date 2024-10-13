@@ -25,7 +25,7 @@ WARN_HANDLER_GROUP = 9
 CURRENT_WARNING_FILTER_STRING = "<b>Current warning filters in this chat:</b>\n"
 
 def checkReasons(reasons):
-    words = ['topic', 'spam', 'تاپیک', 'اسپم']s
+    words = ['topic', 'spam', 'تاپیک', 'اسپم']
     count = 0
     limit, soft_warn = sql.get_warn_setting(chat.id)
     for word in words:
