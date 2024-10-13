@@ -24,6 +24,16 @@ from tg_bot.modules.sql import warns_sql as sql
 WARN_HANDLER_GROUP = 9
 CURRENT_WARNING_FILTER_STRING = "<b>Current warning filters in this chat:</b>\n"
 
+def checkReasons(reasons):
+    words = ['topic', 'spam', 'تاپیک', 'اسپم']s
+    count = 0
+    limit, soft_warn = sql.get_warn_setting(chat.id)
+    for word in words:
+        if word in reasons:
+            count += 1
+    if count >= limit - 1:
+        return True
+    return False
 
 # Not async
 def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = None, bot: Bot = None) -> str:
@@ -39,12 +49,18 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
     limit, soft_warn = sql.get_warn_setting(chat.id)
     num_warns, reasons = sql.warn_user(user.id, chat.id, reason)
     if num_warns >= limit:
+        keyboard = []
         if soft_warn:  # mute
             # chat.unban_member(user.id)
-            oneday = datetime.now() + timedelta(hours=10*limit)
-            bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
-            reply = "{} هشدارها، {} بی صدا شده است!".format(limit, mention_html(user.id, user.first_name))
-        else:
+            if checkReasons(reasons):
+                oneday = datetime.now() + timedelta(hours=20*limit)
+                bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
+                reply = "{} هشدارها، {} بی صدا شده است!".format(limit, mention_html(user.id, user.first_name))
+            else:
+                keyboard = InlineKeyboardMarkup([InlineKeyboardButton("بی صدا کردن", callback_data="mute({})".format(user.id))],
+                            [InlineKeyboardButton("اخراج", callback_data="ban({})".format(user.id))])
+            
+        elif not soft_warn:
             chat.kick_member(user.id)
             # chat.unban_member(user.id)
             reply = "{} اخطار، {} اخراج شده است!".format(limit, mention_html(user.id, user.first_name)) 
@@ -53,8 +69,6 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
             reply += "\n - {}".format(html.escape(warn_reason))
 
         sql.reset_warns(user.id, chat.id)
-
-        keyboard = []
         log_reason = "<b>{}:</b>" \
                       "\n#WARN_BAN" \
                       "\n<b>سرپرست:</b> {}" \
@@ -123,6 +137,38 @@ def button(bot: Bot, update: Update) -> str:
             update.effective_message.edit_text(
                 "کاربر قبلا هیچ هشداری نداشته است.".format(mention_html(user.id, user.first_name)),
                 parse_mode=ParseMode.HTML)
+    match = re.match(r"mute\((.+?)\)", query.data)
+    if match:
+        user_id = match.group(1)
+        chat = update.effective_chat
+        oneday = datetime.now() + timedelta(hours=20*limit)
+        bot.restrict_chat_member(chat.id, user_id, until_date=oneday, can_send_messages=False)
+        update.effective_message.edit_text(
+            "{} بی صدا شده است!".format(mention_html(user_id, user.first_name)),
+            parse_mode=ParseMode.HTML)
+        user_member = chat.get_member(user_id)
+        return "<b>{}:</b>" \
+                "\n#MUTE" \
+                "\n<b>سرپرست:</b> {}" \
+                "\n<b>کاربر:</b> {}".format(html.escape(chat.title),
+                                          mention_html(user.id, user.first_name),
+                                          mention_html(user_member.user.id, user_member.user.first_name))
+    match = re.match(r"ban\((.+?)\)", query.data)
+    if match:
+        user_id = match.group(1)
+        chat = update.effective_chat
+        chat.kick_member(user_id)
+        update.effective_message.edit_text(
+            "{} اخراج شده است!".format(mention_html(user_id, user.first_name)),
+            parse_mode=ParseMode.HTML)
+        user_member = chat.get_member(user_id)
+        return "<b>{}:</b>" \
+                "\n#BAN" \
+                "\n<b>سرپرست:</b> {}" \
+                "\n<b>کاربر:</b> {}".format(html.escape(chat.title),
+                                          mention_html(user.id, user.first_name),
+                                          mention_html(user_member.user.id, user_member.user.first_name))
+                                          
 
     return ""
 
