@@ -24,10 +24,9 @@ from tg_bot.modules.sql import warns_sql as sql
 WARN_HANDLER_GROUP = 9
 CURRENT_WARNING_FILTER_STRING = "<b>Current warning filters in this chat:</b>\n"
 
-def checkReasons(reasons):
+def checkReasons(reasons, limit):
     words = ['topic', 'spam', 'تاپیک', 'اسپم']
     count = 0
-    limit, soft_warn = sql.get_warn_setting(chat.id)
     for word in words:
         if word in reasons:
             count += 1
@@ -52,13 +51,15 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
         keyboard = []
         if soft_warn:  # mute
             # chat.unban_member(user.id)
-            if checkReasons(reasons):
+            if checkReasons(reasons, limit):
                 oneday = datetime.now() + timedelta(hours=20*limit)
                 bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
                 reply = "{} هشدارها، {} بی صدا شده است!".format(limit, mention_html(user.id, user.first_name))
             else:
-                keyboard = InlineKeyboardMarkup([InlineKeyboardButton("بی صدا کردن", callback_data="mute({})".format(user.id))],
-                            [InlineKeyboardButton("اخراج", callback_data="ban({})".format(user.id))])
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("بی صدا کردن", callback_data="mute({})".format(user.id)),
+                     InlineKeyboardButton("اخراج", callback_data="ban({})".format(user.id))]  # Fix: wrap in array
+                ])
             
         elif not soft_warn:
             chat.kick_member(user.id)
