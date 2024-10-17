@@ -56,6 +56,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
                 bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
                 reply = "{} هشدارها، {} بی صدا شده است!".format(limit, mention_html(user.id, user.first_name))
             else:
+                reply = ""
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton("بی صدا کردن", callback_data="mute({})".format(user.id)),
                      InlineKeyboardButton("اخراج", callback_data="ban({})".format(user.id))]  # Fix: wrap in array
