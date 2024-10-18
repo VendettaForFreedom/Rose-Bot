@@ -21,18 +21,34 @@ from tg_bot.modules.helper_funcs.string_handling import split_quotes
 from tg_bot.modules.log_channel import loggable
 from tg_bot.modules.sql import warns_sql as sql
 
+from tg_bot import LOGGER
+
 WARN_HANDLER_GROUP = 9
 CURRENT_WARNING_FILTER_STRING = "<b>Current warning filters in this chat:</b>\n"
 
 def checkReasons(reasons, limit):
+    LOGGER.info("Checking reasons: %s", reasons)
+    LOGGER.info("Checking limit: %s", limit)
+
     words = ['topic', 'spam', 'تاپیک', 'اسپم']
     count = 0
-    for word in words:
-        if word in reasons:
-            count += 1
+
+    # Compile regex patterns to match words anywhere, even if surrounded by symbols/numbers
+    patterns = [re.compile(rf'{re.escape(word)}', re.IGNORECASE) for word in words]
+
+    # Check each reason against all patterns
+    for reason in reasons:
+        for pattern in patterns:
+            if pattern.search(reason):
+                LOGGER.info("Matched pattern: %s in reason: %s", pattern.pattern, reason)
+                count += 1
+
+    LOGGER.info("Final Count: %s", count)
+
     if count >= limit - 1:
         return True
     return False
+
 
 # Not async
 def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = None, bot: Bot = None) -> str:
@@ -54,9 +70,10 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
             if checkReasons(reasons, limit):
                 oneday = datetime.now() + timedelta(hours=20*limit)
                 bot.restrict_chat_member(chat.id, user.id, until_date=oneday, can_send_messages=False)
-                reply = "{} هشدارها، {} بی صدا شده است!".format(limit, mention_html(user.id, user.first_name))
+                reply = "{} هشدار، {} بی صدا شده است!".format(limit, mention_html(user.id, user.first_name))
+                sql.reset_warns(user.id, chat.id)
             else:
-                reply = ""
+                reply = "{} هشدار {}".format(limit, mention_html(user.id, user.first_name))
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton("بی صدا کردن", callback_data="mute({})".format(user.id)),
                      InlineKeyboardButton("اخراج", callback_data="ban({})".format(user.id))]  # Fix: wrap in array
@@ -66,11 +83,11 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
             chat.kick_member(user.id)
             # chat.unban_member(user.id)
             reply = "{} اخطار، {} اخراج شده است!".format(limit, mention_html(user.id, user.first_name)) 
+            sql.reset_warns(user.id, chat.id)
 
         for warn_reason in reasons:
             reply += "\n - {}".format(html.escape(warn_reason))
 
-        sql.reset_warns(user.id, chat.id)
         log_reason = "<b>{}:</b>" \
                       "\n#WARN_BAN" \
                       "\n<b>سرپرست:</b> {}" \
@@ -143,12 +160,14 @@ def button(bot: Bot, update: Update) -> str:
     if match:
         user_id = match.group(1)
         chat = update.effective_chat
+        limit, soft_warn = sql.get_warn_setting(chat.id)
         oneday = datetime.now() + timedelta(hours=20*limit)
         bot.restrict_chat_member(chat.id, user_id, until_date=oneday, can_send_messages=False)
         update.effective_message.edit_text(
-            "{} بی صدا شده است!".format(mention_html(user_id, user.first_name)),
+            "بی صدا شد".format(mention_html(user_id, user.first_name)),
             parse_mode=ParseMode.HTML)
         user_member = chat.get_member(user_id)
+        sql.reset_warns(user_id, chat.id)
         return "<b>{}:</b>" \
                 "\n#MUTE" \
                 "\n<b>سرپرست:</b> {}" \
@@ -161,9 +180,10 @@ def button(bot: Bot, update: Update) -> str:
         chat = update.effective_chat
         chat.kick_member(user_id)
         update.effective_message.edit_text(
-            "{} اخراج شده است!".format(mention_html(user_id, user.first_name)),
+            "اخراج شد!".format(mention_html(user_id, user.first_name)),
             parse_mode=ParseMode.HTML)
         user_member = chat.get_member(user_id)
+        sql.reset_warns(user_id, chat.id)
         return "<b>{}:</b>" \
                 "\n#BAN" \
                 "\n<b>سرپرست:</b> {}" \
@@ -391,18 +411,18 @@ def set_warn_strength(bot: Bot, update: Update, args: List[str]):
     if args:
         if args[0].lower() in ("on", "yes"):
             sql.set_warn_strength(chat.id, False)
-            msg.reply_text("Too many warns will now result in muting!")
+            msg.reply_text("Too many warns will now result in ban!")
             return "<b>{}:</b>\n" \
                    "<b>Admin:</b> {}\n" \
-                   "Has enabled strong warns. Users will be muted.".format(html.escape(chat.title),
+                   "Has enabled strong warns. Users will be banned.".format(html.escape(chat.title),
                                                                             mention_html(user.id, user.first_name))
 
         elif args[0].lower() in ("off", "no"):
             sql.set_warn_strength(chat.id, True)
-            msg.reply_text("Too many warns will now result in a kick! Users will be able to join again after.")
+            msg.reply_text("Too many warns will now result in mute!")
             return "<b>{}:</b>\n" \
                    "<b>Admin:</b> {}\n" \
-                   "Has disabled strong warns. Users will only be kicked.".format(html.escape(chat.title),
+                   "Has disabled strong warns. Users will only be muted.".format(html.escape(chat.title),
                                                                                   mention_html(user.id,
                                                                                                user.first_name))
 
@@ -460,7 +480,7 @@ __mod_name__ = "اخطارها"
 
 WARN_HANDLER = CommandHandler("warn", warn_user, pass_args=True, filters=Filters.group)
 RESET_WARN_HANDLER = CommandHandler(["resetwarn", "resetwarns"], reset_warns, pass_args=True, filters=Filters.group)
-CALLBACK_QUERY_HANDLER = CallbackQueryHandler(button, pattern=r"rm_warn")
+CALLBACK_QUERY_HANDLER = CallbackQueryHandler(button, pattern=r"rm_warn|mute|ban")
 MYWARNS_HANDLER = DisableAbleCommandHandler("warns", warns, pass_args=True, filters=Filters.group)
 ADD_WARN_HANDLER = CommandHandler("addwarn", add_warn_filter, filters=Filters.group)
 RM_WARN_HANDLER = CommandHandler(["nowarn", "stopwarn"], remove_warn_filter, filters=Filters.group)

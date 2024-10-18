@@ -7,7 +7,7 @@ LOG_FILE="tg_bot.log"
 while true
 do
     # Run the Python module and redirect stdout and stderr to the log file
-    python3 -m tg_bot >> $LOG_FILE 2>&1
+    python3 -m tg_bot
 
     # Check the exit status of the Python script
     EXIT_STATUS=$?
